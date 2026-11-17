@@ -1,0 +1,43 @@
+{
+  "name": "proof-scorer",
+  "productName": "ProofScorer",
+  "version": "1.0.0",
+  "description": "證明排序評分系統",
+  "main": "main.js",
+  "author": "ProofScorer",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node test/scoring.test.js",
+    "dist": "electron-builder --win portable --x64",
+    "html": "node build-html.js"
+  },
+  "build": {
+    "appId": "local.proofscorer",
+    "productName": "ProofScorer",
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "portable",
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "證明排序評分-${version}.exe"
+    },
+    "electronLanguages": [
+      "zh-TW",
+      "en-US"
+    ]
+  },
+  "devDependencies": {
+    "electron": "^45.3.3",
+    "electron-builder": "^26.18.0"
+  }
+}
