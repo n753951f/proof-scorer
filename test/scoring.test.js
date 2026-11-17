@@ -78,6 +78,23 @@ assert.deepStrictEqual(p2.seq, [9, 12, 2, 3, 7, 13, 5, 1, 8, 10, 4]);
 assert.strictEqual(S.detectFormat('9 C 2 3 7 D 5 1 8 A 4 X X', S.ITS, 13), S.STI);
 // X 寫在中間仍是 ID→步驟；步驟→ID 中間出現 X 為錯誤
 assert.strictEqual(S.detectFormat('2X613X47X5', S.STI, 10), S.ITS);
-assert.ok(S.parseAnswer('4 1 X 5', S.STI).error);
+
+// 步驟→ID 省略結尾的 X 也算正確
+r = score(p1, '1 4 5 7 A 3 8', S.STI);
+assert.strictEqual(r.total, 8);
+assert.strictEqual(score(p1, '4 1 5 7 A 3 8', S.STI).total, 10);
+assert.strictEqual(S.detectFormat('1 4 5 7 A 3 8', S.ITS, 10), S.STI);
+
+// 步驟→ID 中間的 X 會中斷正確序列：4→1→5 | X | 7→A→3→8
+r = score(p1, '4 1 5 X 7 A 3 8 X X', S.STI);
+assert.strictEqual(r.xScore, 3);
+assert.strictEqual(r.seqScore, 4);
+assert.strictEqual(r.steps[3].status, 'xbreak');
+assert.strictEqual(S.formatAnswer(S.parseAnswer('4 1 5 X 7 A 3 8 X X', S.STI), '→'), '4→1→5→X→7→A→3→8→X→X');
+assert.strictEqual(S.detectFormat('4 1 5 X 7 A 3 8 X X', S.ITS, 10), S.STI);
+// ID→步驟 的 X 只是定位，不會中斷（先定位 X 再轉成步驟→ID）
+assert.strictEqual(score(p1, '2 X 6 1 3 X 4 7 X 5', S.ITS).total, 10);
+// 正確答案的 X 只能在最後
+assert.ok(S.parseKey('4 1 X 5', S.STI).error);
 
 console.log('all scoring tests passed');

@@ -742,6 +742,12 @@
     // 各步驟（最長正確序列包在黃框裡）
     let box = null;
     r.steps.forEach((s, i) => {
+      if (s.xBefore) {
+        box = null; // X 會中斷序列，黃框不會跨過它
+        const div = h('div', 'xdivider' + (i <= c - 1 ? ' done' : ''));
+        div.innerHTML = `<span>X</span><em>學生在此寫了 X，正確序列從這裡中斷</em>`;
+        stepsEl.append(div);
+      }
       const row = stepRow(s, i, c);
       const inBest = best.len && i >= best.start && i <= best.end;
       if (inBest) {
@@ -780,6 +786,9 @@
           break;
         case 'restart':
           [cls, icon, text] = ['warn', 'flag', '重新起算'];
+          break;
+        case 'xbreak':
+          [cls, icon, text] = ['warn', 'unlink', '前面有 X，序列中斷'];
           break;
         default:
           [cls, icon, text] = ['bad', 'ban', '此敘述應為 X'];

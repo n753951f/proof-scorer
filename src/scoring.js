@@ -59,22 +59,20 @@
 
   /**
    * 自動判斷格式：
-   *   有 X 或空白項 → ID→步驟
-   *   有字母 ID（A、B…）→ 步驟→ID
+   *   有空白項 → ID→步驟
    *   已知 ID 總數 n 而長度不等於 n → 步驟→ID（ID→步驟 必須每個 ID 一項）
+   *   出現大於使用項數的編號（如只用 7 項卻有 A=10）→ 步驟→ID（ID→步驟 的步驟編號不會跳號）
+   *   X 夾在中間 → ID→步驟（較常見的寫法）
    *   其餘無法分辨 → 用預設格式（正確答案的格式）
    */
   function detectFormat(text, fallback, n) {
     const toks = tokenize(text).map(parseToken);
     if (toks.some((t) => t.kind === 'blank')) return ITS;
-    // X 出現在中間（後面還有數字）→ 只可能是 ID→步驟；X 全在結尾則兩種都有可能
-    const firstX = toks.findIndex((t) => t.kind === 'x');
-    if (firstX >= 0 && toks.slice(firstX).some((t) => t.kind !== 'x')) return ITS;
-    // ID→步驟 必須剛好每個 ID 一項
     if (n && toks.length !== n) return STI;
-    // ID→步驟 的步驟編號不會超過使用的項目數（例如 1 4 5 7 A 3 8 X X X 有 A=10 但只用 7 項）
     const nums = toks.filter((t) => t.kind === 'num').map((t) => t.n);
     if (nums.length && Math.max(...nums) > nums.length) return STI;
+    const firstX = toks.findIndex((t) => t.kind === 'x');
+    if (firstX >= 0 && toks.slice(firstX).some((t) => t.kind !== 'x')) return ITS;
     return fallback === ITS ? ITS : STI;
   }
 
@@ -110,12 +108,22 @@
       return { fmt, marks, seq: pairs.map((p) => p.id), warnings, dupSteps, missing };
     }
 
-    // 步驟→ID：可在最後用 X 補滿到 ID 總數，例如 1→4→5→7→A→3→8→X→X→X
-    const firstX = toks.findIndex((t) => t.kind === 'x');
-    if (firstX >= 0 && toks.slice(firstX).some((t) => t.kind !== 'x'))
-      return { error: '「步驟→ID」格式的 X 只能寫在最後' };
-    const trailingX = firstX >= 0 ? toks.length - firstX : 0;
-    const seq = toks.filter((t) => t.kind === 'num').map((t) => t.n);
+    // 步驟→ID：X 可寫在最後補滿到 ID 總數（1→4→5→7→A→3→8→X→X→X），也可省略；
+    // X 寫在中間會中斷正確序列的計算（breaks 記錄「前面有 X」的步驟索引）
+    const items = toks.filter((t) => t.kind !== 'blank').map((t) => (t.kind === 'x' ? 'X' : t.n));
+    const seq = [];
+    const breaks = new Set();
+    let sawX = false;
+    for (const it of items) {
+      if (it === 'X') sawX = true;
+      else {
+        if (sawX && seq.length) breaks.add(seq.length);
+        sawX = false;
+        seq.push(it);
+      }
+    }
+    const firstX = items.indexOf('X');
+    const midX = firstX >= 0 && items.slice(firstX).some((it) => it !== 'X');
     const seen = new Set();
     const dupIds = [];
     seq.forEach((id) => {
@@ -123,7 +131,7 @@
       seen.add(id);
     });
     if (dupIds.length) warnings.push(`ID ${dupIds.map(idLabel).join('、')} 重複使用`);
-    return { fmt, seq, warnings, dupIds, trailingX, length: toks.length };
+    return { fmt, seq, items, breaks, midX, warnings, dupIds, length: items.length };
   }
 
   /**
@@ -141,6 +149,7 @@
       if (a.missing.length) return { error: `步驟編號不連續，缺少 ${a.missing.join('、')}` };
       autoN = a.marks.length;
     } else {
+      if (a.midX) return { error: '正確答案的 X 只能寫在最後' };
       if (a.dupIds.length) return { error: `ID ${a.dupIds.map(idLabel).join('、')} 重複` };
       autoN = Math.max(Math.max(...a.seq), a.length); // 結尾的 X 也算進 ID 總數
     }
@@ -179,21 +188,22 @@
       const kp = key.pos.has(id) ? key.pos.get(id) : -1;
       const prev = i > 0 ? ans.seq[i - 1] : null;
       const prevInKey = prev != null && key.pos.has(prev);
+      const xBefore = !!(ans.breaks && ans.breaks.has(i)); // 步驟→ID 中間的 X
       let status;
       if (kp < 0) {
         run = 0;
         status = 'notInKey'; // 正解中此 ID 應為 X
-      } else if (prevInKey && key.succ.get(prev) === id) {
+      } else if (!xBefore && prevInKey && key.succ.get(prev) === id) {
         run += 1;
         status = 'link'; // 與上一步的銜接正確
       } else {
         run = 1;
-        status = i === 0 ? 'start' : prevInKey ? 'break' : 'restart';
+        status = i === 0 ? 'start' : xBefore ? 'xbreak' : prevInKey ? 'break' : 'restart';
       }
       let expected = null;
       if (status === 'break') expected = key.succ.has(prev) ? key.succ.get(prev) : 'END';
       if (run > best.len) best = { len: run, start: i - run + 1, end: i };
-      steps.push({ i, id, keyStep: kp >= 0 ? kp + 1 : null, status, run, expected });
+      steps.push({ i, id, keyStep: kp >= 0 ? kp + 1 : null, status, run, expected, xBefore });
       snaps.push({ ...best });
     });
 
@@ -230,7 +240,7 @@
   /** 將答案字串依其格式正規化顯示（保留學生原本格式） */
   function formatAnswer(ans, arrow = ' → ') {
     if (ans.fmt === ITS) return ans.marks.map((m) => (m === null ? '_' : String(m))).join(arrow);
-    return formatSti(ans.seq, arrow, ans.seq.length + (ans.trailingX || 0));
+    return ans.items.map((it) => (it === 'X' ? 'X' : idLabel(it))).join(arrow);
   }
 
   return {

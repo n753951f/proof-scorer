@@ -404,6 +404,19 @@ svg { width: 18px; height: 18px; flex: none; }
 .x-score { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
 .x-score b { font-size: 15px; color: var(--ink); }
 
+.xdivider {
+  display: flex; align-items: center; gap: 10px;
+  margin: 6px 0; padding: 0 12px;
+  font-size: 12px; color: var(--warn);
+}
+.xdivider::after { content: ""; flex: 1; border-top: 2px dashed var(--warn); opacity: .5; }
+.xdivider span {
+  width: 40px; height: 24px; margin-left: 76px; display: grid; place-items: center;
+  border-radius: 7px; background: var(--warn-soft); font: 700 14px var(--mono);
+}
+.xdivider em { font-style: normal; white-space: nowrap; }
+.xdivider:not(.done) { opacity: .45; }
+
 /* 最長正確序列：黃框 */
 .bestbox {
   position: relative;
