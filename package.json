@@ -9,7 +9,7 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "test": "node test/scoring.test.js",
+    "test": "node test/scoring.test.js && node test/edge-cases.test.js",
     "dist": "electron-builder --win portable --x64",
     "html": "node build-html.js"
   },

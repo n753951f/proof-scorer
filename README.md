@@ -1,10 +1,12 @@
 # 證明排序評分 ProofScorer
 
+完整的使用方法、計分範例與極端情況說明請見 **[使用說明](docs/使用說明.md)**。
+
 ## 使用方式
 - 線上版：https://n753951f.github.io/proof-scorer/ （直接用瀏覽器開啟，不需下載）
 - 下載：[Releases](https://github.com/n753951f/proof-scorer/releases)
-- `dist/證明排序評分-1.0.0.exe`：免安裝執行檔（Windows x64），雙擊即可使用
-- `dist/證明排序評分.html`：單檔網頁版，功能相同，雙擊用瀏覽器開啟（電腦開啟「智慧型應用程式控制」擋下 exe 時使用）
+  - `ProofScorer-x.x.x-portable.exe`：免安裝執行檔（Windows x64），雙擊即可使用
+  - `ProofScorer.html`：單檔網頁版，功能相同，雙擊用瀏覽器開啟（電腦開啟「智慧型應用程式控制」擋下 exe 時使用）
 
 ## 計分規則
 1. X 定位：正解為 X 的 ID，學生也判為 X（未使用）→ 每個 1 分
